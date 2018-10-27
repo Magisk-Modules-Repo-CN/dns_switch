@@ -9,8 +9,8 @@ DNS Switch allows you to change your dns systemlessly with terminal. Type su the
 
 ## Change Log
 ### v1 - 10.26.2018
-* Inital Release*
+* Inital Release
 
 
 ## Source Code
-* Module [GitHub](https://github.com/JohnFawkes/DNSSwitch) *
+* Module [GitHub](https://github.com/JohnFawkes/DNSSwitch)
