@@ -55,9 +55,62 @@ unity_custom() {
   BIN=$SYS/bin
   XBIN=$SYS/xbin
   if [ -d $XBIN ]; then BINPATH=$XBIN; else BINPATH=$BIN; fi
-}
+  if [ -d /cache ]; then CACHELOC=/cache; else CACHELOC=/data/cache; fi
+  MODTITLE=$(grep_prop name $INSTALLER/module.prop)
+  VER=$(grep_prop version $INSTALLER/module.prop)
+	AUTHOR=$(grep_prop author $INSTALLER/module.prop)
+	INSTLOG=$CACHELOC/dns_switch_install.log
+} 
 
 # Custom Functions for Install AND Uninstall - You can put them here
+# Log functions
+
+log_handler() {
+  echo "" >> $INSTLOG 2>&1
+  echo -e "$(date +"%m-%d-%Y %H:%M:%S") - $1" >> $INSTLOG 2>&1
+}
+
+log_start() {
+	if [ -f "$INSTLOG" ]; then
+    rm -f $INSTLOG
+  fi
+  touch $INSTLOG
+  echo " " >> $INSTLOG 2>&1
+  echo "    *******************************************" >> $INSTLOG 2>&1
+  echo "    *<name2>*" >> $INSTLOG 2>&1
+  echo "    *******************************************" >> $INSTLOG 2>&1
+  echo "    *<version2>*" >> $INSTLOG 2>&1
+  echo "    *******************************************" >> $INSTLOG 2>&1
+  echo "    *<author2>*" >> $INSTLOG 2>&1
+  echo "    *******************************************" >> $INSTLOG 2>&1
+  echo " " >> $INSTLOG 2>&1
+  log_handler "Starting module installation script"
+}
+
+log_print() {
+  ui_print "$1"
+  log_handler "$1"
+}
+
+# INSERT MODULE INFO INTO CONFIG.SH
+(
+for TMP in version2 name2 author2; do
+  NEW=$(grep_prop $TMP $INSTALLER/module.prop)
+  [ "$TMP" == "author" ] && NEW="by ${NEW}"
+  CHARS=$((${#NEW}-$(echo "$NEW" | tr -cd "©®™" | wc -m)))
+  SPACES=""
+  if [ $CHARS -le 41 ]; then
+    for i in $(seq $(((41-$CHARS) / 2))); do
+      SPACES="${SPACES} "
+    done
+  fi
+  if [ $(((41-$CHARS) % 2)) == 1 ]; then sed -i "s/<$TMP>/$SPACES$NEW${SPACES} /" $INSTALLER/config.sh; else sed -i "s/<$TMP>/$SPACES$NEW$SPACES/" $INSTALLER/config.sh; fi
+done
+)
+
+# PRINT MOD NAME
+log_start
+
 
 ##########################################################################################
 # Installation Message
