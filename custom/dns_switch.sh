@@ -8,29 +8,36 @@
 # > ENTER MAGISK MODULE ID HERE
 MODID=<MODID>
 
-# Varizbles
+# Detect root
+_name=$(basename $0)
+[[ $(id -u) -ne 0 ]] && { echo "$MODID needs to run as root!"; echo "type 'su' then '$_name'"; exit 1; }
+
+# Variables
+
 OLDPATH=$PATH
-MOUNTPATH=<MOUNTPATH>
 MODPATH=<MODPATH>
 MAGISK=<MAGISK>
 ROOT=<ROOT>
 SYS=<SYS>
 VEN=<VEN>
+CACHELOC=<CACHELOC>
+DNSLOG=$MODPATH/dns.txt
 
 # Set Prop Directory
-PROP=<PROP>
-MODPROP=<MODPROP>
+
+PROP=/sbin/.core/img/dns_switch/system.prop
+MODPROP=/sbin/.core/img/dns_switch/module.prop
 [ -f $MODPROP ] || { echo "Module not detected!"; quit 1; }
 
 # Set Log Files
 mount -o remount,rw /cache 2>/dev/null
 mount -o rw,remount /cache 2>/dev/null
 # > Logs should go in this file
-LOG=/cache/${MODID}.log
-oldLOG=/cache/${MODID}-old.log
+LOG=$CACHELOC/${MODID}.log
+oldLOG=$CACHELOC/${MODID}-old.log
 # > Verbose output goes here
-VERLOG=/cache/${MODID}-verbose.log
-oldVERLOG=/cache/${MODID}-verbose-old.log
+VERLOG=$CACHELOC/${MODID}-verbose.log
+oldVERLOG=$CACHELOC/${MODID}-verbose-old.log
 
 # Start Logging verbosely
 mv -f $VERLOG $oldVERLOG 2>/dev/null; mv -f $LOG $oldLOG 2>/dev/null
@@ -73,16 +80,14 @@ if [ -z "$(echo $PATH | grep /sbin:)" ]; then
 	alias resetprop="/data/adb/magisk/magisk resetprop"
 fi
 
-# Log print
-#echo "Functions loaded."
 if $BBox; then
   BBV=$(busybox | grep "BusyBox v" | sed 's|.*BusyBox ||' | sed 's| (.*||')
-#  echo "Using busybox: ${PATH} (${BBV})."
-#else
-#  echo "Using installed applets (not busybox)"
+  echo "Using busybox: ${PATH} (${BBV})." >> $LOG 2>&1
+else
+ echo "Using installed applets (not busybox)" >> $LOG 2>&1
 fi
 
-#=========================== Functions
+# Functions
 quit() {
   PATH=$OLDPATH
   exit $?
@@ -94,7 +99,6 @@ get_file_value() {
 		cat $1 | grep $2 | sed "s|.*${2}||" | sed 's|\"||g'
 	fi
 }
-
 
 api_level_arch_detect() {
   API=`grep_prop ro.build.version.sdk`
@@ -126,9 +130,9 @@ set_perm() {
 
 magisk_version() {
   if grep MAGISK_VER /data/adb/magisk/util_functions.sh; then
-		echo "$MAGISK_VERSION $MAGISK_VERSIONCODE" >> $ALOG 2>&1
+		echo "$MAGISK_VERSION $MAGISK_VERSIONCODE" >> $LOG 2>&1
 	else
-		echo "Magisk not installed" >> $ALOG 2>&1
+		echo "Magisk not installed" >> $LOG 2>&1
 	fi
 }
 
@@ -148,8 +152,8 @@ AUTHOR=$(grep_prop author $MODPROP)
 # Mod Name/Title
 MODTITLE=$(grep_prop name $MODPROP)
 #Grab Magisk Version
-MAGISK_VERSION=$(echo $(get_file_value /data/adb/magisk/util_functions.sh "MAGISK_VERSION=") | sed 's|-.*||')
-MAGISK_VERSIONCODE=$(echo $(get_file_value /data/adb/magisk/util_functions.sh "MAGISK_VERSIONCODE=") | sed 's|-.*||')
+MAGISK_VERSION=$(echo $(get_file_value /data/adb/magisk/util_functions.sh "MAGISK_VER=") | sed 's|-.*||')
+MAGISK_VERSIONCODE=$(echo $(get_file_value /data/adb/magisk/util_functions.sh "MAGISK_VER_CODE=") | sed 's|-.*||')
 
 # Colors
 G='\e[01;32m'		# GREEN TEXT
@@ -193,50 +197,6 @@ set_file_prop() {
   fi
 }
 
-# https://github.com/fearside/ProgressBar
-ProgressBar() {
-# Process data
-  _progress=$(((${1}*100/${2}*100)/100))
-  _done=$(((${_progress}*4)/10))
-  _left=$((40-$_done))
-# Build progressbar string lengths
-  _done=$(printf "%${_done}s")
-  _left=$(printf "%${_left}s")
-
-# 1.2 Build progressbar strings and print the ProgressBar line
-# 1.2.1 Output example:
-# 1.2.1.1 Progress : [########################################] 100%
-printf "\rProgress : ${BGBL}|${N}${_done// /${BGBL}$loadBar${N}}${_left// / }${BGBL}|${N} ${_progress}%%"
-}
-
-#https://github.com/fearside/SimpleProgressSpinner
-Spinner() {
-
-# Choose which character to show.
-case ${_indicator} in
-  "|") _indicator="/";;
-  "/") _indicator="-";;
-  "-") _indicator="\\";;
-  "\\") _indicator="|";;
-  # Initiate spinner character
-  *) _indicator="\\";;
-esac
-
-# Print simple progress spinner
-printf "\r${@} [${_indicator}]"
-}
-
-# "cmd & spinner [message]"
-e_spinner() {
-  PID=$!
-  h=0; anim='-\|/';
-  while [ -d /proc/$PID ]; do
-    h=$(((h+1)%4))
-    sleep 0.02
-    printf "\r${@} [${anim:$h:1}]"
-  done
-}
-
 # test_connection
 test_connection() {
   echo -n "Testing internet connection "
@@ -255,7 +215,7 @@ upload_logs() {
     [ -s $LOG ] && logUp=$(cat $LOG | nc termbin.com 9999)
     [ -s $oldLOG ] && oldlogUp=$(cat $oldLOG | nc termbin.com 9999)
     echo -n "Link: "
-    echo "$MODEL ($DEVICE) API $API\n$ROM\n$ID\n
+    echo "$MODEL ($DEVICE) API $API\n$ROM\n$MODID\n
     O_Verbose: $oldverUp
     Verbose:   $verUp
 
@@ -272,15 +232,14 @@ mod_head() {
 	echo "${W}$MODTITLE $VER${N}(${Bl}$REL${N})"
 	echo "by ${W}$AUTHOR${N}"
 	echo "$div"
-  echo "${W}$BRAND,$MODEL,$DEVICE,$ROM${N}"
+  echo "${R}$BRAND${N},${R}$MODEL${N},${R}$ROM${N}"
   echo "$div"
-#  echo "${W}$PATH${N}"
-	echo "${W}$BBV${N}"
-	echo "${W}$_bb${N}"
+	echo "${W}BUSYBOX VERSION = ${N}${R}$BBV${N}"
 	echo "$div"
 if $MAGISK; then 
-	magisk_version
+	echo "${W}MAGISK VERSION = ${N}${R} $MAGISK_VERSION${N}" 
 	echo "$div"
+  echo ""
 fi
 }
 
@@ -289,27 +248,72 @@ fi
 # > You can add functions, variables & etc.
 # > Rather than editing the default vars above.
 
-re_dns_menu () {
+# Find prop type
+get_prop_type() {
+	echo $1 | sed 's|.*\.||'
+}
 
-response=""
+# Get left side of =
+get_eq_left() {
+	echo $1 | sed 's|=.*||'
+}
 
-  echo ""
-  title_div "${G}REMOVE CUSTOM DNS MENU${N}"
+# Get right side of =
+get_eq_right() {
+	echo $1 | sed 's|.*=||'
+}
+
+# Get first word in string
+get_first() {
+	case $1 in
+		*\ *) echo $1 | sed 's|\ .*||'
+		;;
+		*=*) get_eq_left "$1"
+		;;
+	esac
+}
+
+set_perm() {
+  chown $2:$3 $1 || return 1
+  chmod $4 $1 || return 1
+  [ -z $5 ] && chcon 'u:object_r:system_file:s0' $1 || chcon $5 $1 || return 1
+}
+
+log_menu () {
+
+logresponse=""
+choice=""
+
+  echo "$div"
+  echo "" 
+  echo "${G}***LOGGING MAIN MENU***${N}"
   echo ""
   echo "$div"
   echo ""
-  echo -n "${G}Do You Want to Remove Your Custom DNS?${N}" 
+  echo "${G}Do You Want To Take Logs?${N}"
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
-  read -r response
-if [ "$response" = "y" ] || [ "$response" = "Y" ] || [ "$response" = "yes" ] || [ "$response" = "Yes" ] || [ "$response" = "YES" ]; then
-dns_remove
+  read -r logresponse
+if [ "$logresponse" = "y" ] || [ "$logresponse" = "Y" ] || [ "$logresponse" = "yes" ] || [ "$logresponse" = "Yes" ] || [ "$logresponse" = "YES" ]; then
+upload_logs
 else
+echo -n "${R}Return to menu? < y | n > : ${N}"
+read -r mchoice
+ if [ "$mchoice" = "y" ]; then
 menu
+else
+echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
+sleep 1.5
+clear && quit
+ fi
 fi
 }
 
- dns_remove () {
+dns_remove () {
+
+custom=$(echo $(get_file_value $DNSLOG "custom=") | sed 's|-.*||')
+custom2=$(echo $(get_file_value $DNSLOG "custom2=") | sed 's|-.*||')
+
 resetprop --delete net.eth0.dns1
 resetprop --delete net.eth0.dns2
 resetprop --delete net.dns1
@@ -323,24 +327,79 @@ resetprop --delete net.rmnet1.dns2
 resetprop --delete net.pdpbr1.dns1
 resetprop --delete net.pdpbr1.dns2
 
-if [ -f $MODPATH/system/etc/resolv.conf ]; then
-sed -i -e "$custom/d" >> $MODPATH/system/etc/resolv.conf
-sed -i -e "$custom2/d" >> $MODPATH/system/etc/resolv.conf
+if [ -f $MODPATH/system/etc/resolv.conf ]; then  
+  sed -i "/nameserver\ "$custom"/d" $MODPATH/system/etc/resolv.conf
+  if [ "$custom2" ]; then
+    sed -i "/nameserver\ "$custom2"/d" $MODPATH/system/etc/resolv.conf
+  fi
 fi
-
-echo "${B}Custom DNS Removed Successfully${N}"
-sleep 1
+echo -n "${R}Return to menu? < y | n > : ${N}"
+read -r mchoice
+if [ "$mchoice" = "y" ]; then
 menu
-} 
+else
+echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
+sleep 1.5
+clear && quit
+fi
+}
 
-dns_menu() {
+re_dns_menu () {
+
+response=""
+choice=""
+
+  echo "$div"
+  echo ""
+  echo "${G}***REMOVE CUSTOM DNS MENU$***{N}"
+  echo ""
+  echo "$div"
+  echo ""
+  echo -n "${G}Do You Want to Remove Your Custom DNS?${N}" 
+  echo ""
+  echo -n "${R}[CHOOSE] :  ${N}"
+  read -r response
+if [ "$response" = "y" ] || [ "$response" = "Y" ] || [ "$response" = "yes" ] || [ "$response" = "Yes" ] || [ "$response" = "YES" ]; then
+dns_remove
+else
+  echo ""
+  echo -e "${W}R)${N} ${B}Return to Main Menu${N}"
+  echo ""
+  echo -e "${W}Q)${N} ${B}Quit${N}"
+  echo "$div"
+  echo ""
+  echo -n "${R}[CHOOSE] :  ${N}"
+
+  read -r choice
+ 
+  case $choice in
+  r|R) echo "${B}Return to Main Menu Selected... ${N}"
+  sleep 1
+  clear
+  menu
+  ;;
+  q|Q) echo " ${R}Quiting... ${N}"
+  sleep 1
+  clear
+  quit
+  ;;
+  *) echo "${Y}item not available! Try Again${N}"
+  sleep 1.5
+  clear
+  ;;
+  esac
+fi
+}
+
+dns_menu () {
 
 custom=""
 custom2=""
-choice2=""
+choice=""
 
+  echo "$div"
   echo ""
-  title_div "${G}CUSTOM DNS MENU${N}"
+  echo "${G}***CUSTOM DNS MENU***${N}"
   echo ""
   echo "$div"
   echo ""
@@ -349,61 +408,72 @@ choice2=""
   echo -n "${R}[CHOOSE] :  ${N}"
   echo ""
   read -r custom
-  echo "${G}$custom${N}"
+ if [ -n $custom ]; then
+touch $DNSLOG
+set_perm $DNSLOG 0 0 0777
+truncate -s 0 $DNSLOG
+echo "custom=$custom" >> $DNSLOG 2>&1
+setprop net.eth0.dns1 $custom
+setprop net.dns1 $custom
+setprop net.ppp0.dns1 $custom
+setprop net.rmnet0.dns1 $custom
+setprop net.rmnet1.dns1 $custom
+setprop net.pdpbr1.dns1 $custom
+iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
+iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
+ fi
   echo ""
-  echo "${G} Would You Like to Enter a Second DNS?${N}"
+  echo -n "${G} Would You Like to Enter a Second DNS?${N}"
   echo ""
   echo -n "${R} [CHOOSE] :   ${N}"
   echo ""
-  read -r choice2
-  echo "${G}$choice2${N}"
+  read -r choice
   echo ""
-if [ "$choice2" = "y" ] || [ "$choice2" = "Y" ] || [ "$choice2" = "yes" ] || [ "$choice2" = "Yes" ] || [ "$choice2" = "YES" ]; then
+if [ "$choice" = "y" ] || [ "$choice" = "Y" ] || [ "$choice" = "yes" ] || [ "$choice" = "Yes" ] || [ "$choice" = "YES" ]; then
   echo -n "${G} Please Enter Your Custom DNS2${N}"
   echo ""
   echo -n "${R} [CHOOSE]  :  ${N}"
   echo ""
   read -r custom2
-  echo "${G}$custom2${N}"
-fi
-if [ -n $custom ] || [ -n $custom2 ]; then
-setprop net.eth0.dns1 $custom
+  if [ -n $custom2 ]; then
+echo "custom2=$custom2" >> $DNSLOG 2>&1
 setprop net.eth0.dns2 $custom2
-setprop net.dns1 $custom
 setprop net.dns2 $custom2
-setprop net.ppp0.dns1 $custom
 setprop net.ppp0.dns2 $custom2
-setprop net.rmnet0.dns1 $custom
 setprop net.rmnet0.dns2 $custom2
-setprop net.rmnet1.dns1 $custom
 setprop net.rmnet1.dns2 $custom2
-setprop net.pdpbr1.dns1 $custom
 setprop net.pdpbr1.dns2 $custom2
-iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
 iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53
-iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
 iptables -t nat -I OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53
-  if [ -f /system/etc/resolv.conf ]; then
+  fi
+   if [ -f /system/etc/resolv.conf ]; then
 mkdir -p $MODPATH/system/etc
 cp -f /system/etc/resolv.conf $MODPATH/system/etc
 printf "nameserver $custom\nnameserver $custom2" >> $MODPATH/system/etc/resolv.conf
 chmod 644 $MODPATH/system/etc/resolv.conf
-  fi
-fi
+   fi
+else
+echo -n "${R}Return to menu? < y | n > : ${N}"
+read -r mchoice
+ if [ "$mchoice" = "y" ]; then
+menu
+ else
 echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
-quit
+sleep 1.5
+clear && quit
+ fi
+fi
 } 
 
-menu() {
+menu () {
   
 choice=""
 
 while [ "$choice" != "q" ]
   do  	
   mod_head
-  echo ""
-  title_div "${G}DNS MAIN MENU${N}"
-  echo ""
+  echo "$div"
+  echo "${G}***DNS MAIN MENU***${N}"
   echo "$div"
   echo ""
   echo "${G}Please make a Selection${N}"
@@ -414,6 +484,7 @@ while [ "$choice" != "q" ]
   echo ""
   echo -e "${W}Q)${N} ${B}Quit${N}"
   echo ""
+  echo -e "${W}L)${N} ${B}Logs${N}"
   echo "$div"
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
@@ -422,16 +493,24 @@ while [ "$choice" != "q" ]
  
   case $choice in
   d|D) echo "${G} Custom DNS Menu Selected... ${N}"
-  sleep 1.5
+  sleep 1
+  clear
   dns_menu
   ;;
-  r|R) echo "${Y} Remove Custom DNS Selected... ${N}"
-  sleep 1.5
+  r|R) echo "${B} Remove Custom DNS Selected... ${N}"
+  sleep 1
+  clear
   re_dns_menu
   ;;
   q|Q) echo " ${R}Quiting... ${N}"
+  sleep 1
   clear
   quit
+  ;;
+  l|L) echo "${R}Logs Selected...${N}"
+  sleep 1
+  clear
+  log_menu
   ;;
   *) echo "${Y}item not available! Try Again${N}"
   sleep 1.5
