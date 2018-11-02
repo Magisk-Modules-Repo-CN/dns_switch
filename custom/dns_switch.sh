@@ -22,11 +22,12 @@ SYS=<SYS>
 VEN=<VEN>
 CACHELOC=<CACHELOC>
 DNSLOG=$MODPATH/dns.txt
+DNSSERV=$MODPATH/service.sh
 
 # Set Prop Directory
 
-PROP=/sbin/.core/img/dns_switch/system.prop
-MODPROP=/sbin/.core/img/dns_switch/module.prop
+PROP=<PROP>
+MODPROP=<MODPROP>
 [ -f $MODPROP ] || { echo "Module not detected!"; quit 1; }
 
 # Set Log Files
@@ -279,6 +280,24 @@ set_perm() {
   [ -z $5 ] && chcon 'u:object_r:system_file:s0' $1 || chcon $5 $1 || return 1
 }
 
+help_me() {
+  cat << EOF
+$MODTITLE $VER($REL)
+by $AUTHOR
+
+Usage: $_name
+   or: $_name [options]...
+   
+Options:
+    -nc                    removes ANSI escape codes
+    -r                     remove DNS
+    -c [DNS ADRESS]        add custom DNS
+    -l                     list custom DNS server(s) in use
+    -h                     show this message
+EOF
+exit
+}
+
 log_menu () {
 
 logresponse=""
@@ -351,7 +370,7 @@ choice=""
 
   echo "$div"
   echo ""
-  echo "${G}***REMOVE CUSTOM DNS MENU$***{N}"
+  echo "${G}***REMOVE CUSTOM DNS MENU***${N}"
   echo ""
   echo "$div"
   echo ""
@@ -419,8 +438,8 @@ setprop net.ppp0.dns1 $custom
 setprop net.rmnet0.dns1 $custom
 setprop net.rmnet1.dns1 $custom
 setprop net.pdpbr1.dns1 $custom
-iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
-iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53
+echo "iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53" >> $DNSSERV 2>&1
+echo "iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53" >> $DNSSERV 2>&1
  fi
   echo ""
   echo -n "${G} Would You Like to Enter a Second DNS?${N}"
@@ -443,8 +462,8 @@ setprop net.ppp0.dns2 $custom2
 setprop net.rmnet0.dns2 $custom2
 setprop net.rmnet1.dns2 $custom2
 setprop net.pdpbr1.dns2 $custom2
-iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53
-iptables -t nat -I OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53
+echo "iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53" >> $DNSSERV 2>&1 
+echo "iptables -t nat -I OUTPUT -p udp --dport 53 -j DNAT --to-destination $custom2:53" >> $DNSSERV 2>&1
   fi
    if [ -f /system/etc/resolv.conf ]; then
 mkdir -p $MODPATH/system/etc
@@ -468,6 +487,8 @@ fi
 menu () {
   
 choice=""
+custom=$(echo $(get_file_value $DNSLOG "custom=") | sed 's|-.*||')
+custom2=$(echo $(get_file_value $DNSLOG "custom2=") | sed 's|-.*||')
 
 while [ "$choice" != "q" ]
   do  	
@@ -476,6 +497,14 @@ while [ "$choice" != "q" ]
   echo "${G}***DNS MAIN MENU***${N}"
   echo "$div"
   echo ""
+  echo "$div"
+  if [ "$custom" ]; then
+  echo -e "${W}Your Custom DNS is :${N} ${R}$custom${N}"
+  fi
+  if [ "$custom2" ]; then
+  echo -e "${W}Your Second Custom DNS is :${N} ${R}$custom2${N}"
+  fi
+  echo "$div"
   echo "${G}Please make a Selection${N}"
   echo ""
   echo -e "${W}D)${N} ${B}Enter Custom DNS${N}"
@@ -520,6 +549,40 @@ while [ "$choice" != "q" ]
 done
 }
 
+case $1 in
+-r|-R) shift
+  for i in "$@"; do
+  dns_remove
+  done
+  exit;;
+-l|-L) shift
+  for i in "$@"; do
+custom=$(echo $(get_file_value $DNSLOG "custom=") | sed 's|-.*||')
+custom2=$(echo $(get_file_value $DNSLOG "custom2=") | sed 's|-.*||')
+  if [ "$custom" ]; then
+  echo -e "${W}Your Custom DNS is :${N} ${R}$custom${N}"
+  elif [ "$custom2" ]; then
+  echo -e "${W}Your Second Custom DNS is :${N} ${R}$custom2${N}"
+  else
+  echo -e "${R}NO CUSTOM DNS IN USE${N}"
+  echo -e "${R}Please run 'su' then 'dns_switch' to use a custom DNS${N}"
+  fi
+  done
+  exit;;
+-h|--help) help_me;;
+esac  
+
 menu
 
 quit $?
+
+
+Options:
+    -nc                    removes ANSI escape codes
+    -r                     remove DNS
+#    -c [DNS ADRESS]        add custom DNS
+    -l                     list custom DNS server(s) in use
+    -h                     show this message
+EOF
+exit
+}
