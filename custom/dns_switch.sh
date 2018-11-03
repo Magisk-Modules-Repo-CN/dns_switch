@@ -10,7 +10,7 @@ MODID=<MODID>
 
 # Detect root
 _name=$(basename $0)
-[[ $(id -u) -ne 0 ]] && { echo "$MODID needs to run as root!"; echo "type 'su' then '$_name'"; exit 1; }
+[[ $(id -u) -ne 0 ]] && { echo "$MODID 需要以root身份运行!"; echo "输入 'su' 然后再输入 '$_name'"; exit 1; }
 
 # Variables
 
@@ -28,7 +28,7 @@ DNSSERV=$MODPATH/service.sh
 
 PROP=<PROP>
 MODPROP=<MODPROP>
-[ -f $MODPROP ] || { echo "Module not detected!"; quit 1; }
+[ -f $MODPROP ] || { echo "未检测到模块!"; quit 1; }
 
 # Set Log Files
 mount -o remount,rw /cache 2>/dev/null
@@ -54,8 +54,8 @@ elif $MAGISK && [ -d /sbin/.core/busybox ]; then
   BBox=true
 else
   BBox=false
-  echo "! Busybox not detected"
-	echo "Please install one (@osm0sis' busybox recommended)"
+  echo "! 没有检测到Busybox"
+	echo "请安装Busybox (推荐使用@osm0sis' busybox)"
   for applet in cat chmod cp grep md5sum mv printf sed sort tar tee tr wget; do
     [ "$($applet)" ] || quit 1
   done
@@ -200,7 +200,7 @@ set_file_prop() {
 
 # test_connection
 test_connection() {
-  echo -n "Testing internet connection "
+  echo -n "测试互联网连接 "
   ping -q -c 1 -W 1 google.com >/dev/null 2>/dev/null && echo "- OK" || { echo "Error"; false; }
 }
 
@@ -210,7 +210,7 @@ upload_logs() {
     test_connection
     [ $? -ne 0 ] && exit
     verUp=none; oldverUp=none; logUp=none; oldlogUp=none;
-    echo "Uploading logs"
+    echo "上传日志中"
     [ -s $VERLOG ] && verUp=$(cat $VERLOG | nc termbin.com 9999)
     [ -s $oldVERLOG ] && oldverUp=$(cat $oldVERLOG | nc termbin.com 9999)
     [ -s $LOG ] && logUp=$(cat $LOG | nc termbin.com 9999)
@@ -285,15 +285,15 @@ help_me() {
 $MODTITLE $VER($REL)
 by $AUTHOR
 
-Usage: $_name
-   or: $_name [options]...
+用法: $_name
+   或: $_name [options]...
    
-Options:
-    -nc                    removes ANSI escape codes
-    -r                     remove DNS
-    -c [DNS ADRESS]        add custom DNS
-    -l                     list custom DNS server(s) in use
-    -h                     show this message
+[options]选项:
+    -nc                    删除ANSI转义码
+    -r                     移除DNS
+    -c [DNS IPv4地址]        添加自定义DNS
+    -l                     列出正在使用的自定义DNS服务器
+    -h                     显示此消息
 EOF
 exit
 }
@@ -305,23 +305,23 @@ choice=""
 
   echo "$div"
   echo "" 
-  echo "${G}***LOGGING MAIN MENU***${N}"
+  echo "${G}***记录主菜单***${N}"
   echo ""
   echo "$div"
   echo ""
-  echo "${G}Do You Want To Take Logs?${N}"
+  echo "${G}你想要记录日志吗？?${N}"
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
   read -r logresponse
 if [ "$logresponse" = "y" ] || [ "$logresponse" = "Y" ] || [ "$logresponse" = "yes" ] || [ "$logresponse" = "Yes" ] || [ "$logresponse" = "YES" ]; then
 upload_logs
 else
-echo -n "${R}Return to menu? < y | n > : ${N}"
+echo -n "${R}返回菜单? < y | n > : ${N}"
 read -r mchoice
  if [ "$mchoice" = "y" ]; then
 menu
 else
-echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
+echo "${R} 感谢您使用自定义DNS模块 By @JohnFawkes - @Telegram/@XDA ${N}"
 sleep 1.5
 clear && quit
  fi
@@ -352,12 +352,12 @@ if [ -f $MODPATH/system/etc/resolv.conf ]; then
     sed -i "/nameserver\ "$custom2"/d" $MODPATH/system/etc/resolv.conf
   fi
 fi
-echo -n "${R}Return to menu? < y | n > : ${N}"
+echo -n "${R}返回菜单? < y | n > : ${N}"
 read -r mchoice
 if [ "$mchoice" = "y" ]; then
 menu
 else
-echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
+echo "${R} 感谢您使用自定义DNS模块 By @JohnFawkes - @Telegram/@XDA ${N}"
 sleep 1.5
 clear && quit
 fi
@@ -370,11 +370,11 @@ choice=""
 
   echo "$div"
   echo ""
-  echo "${G}***REMOVE CUSTOM DNS MENU***${N}"
+  echo "${G}***移除自定义DNS菜单***${N}"
   echo ""
   echo "$div"
   echo ""
-  echo -n "${G}Do You Want to Remove Your Custom DNS?${N}" 
+  echo -n "${G}您要移除自定义DNS吗？?${N}" 
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
   read -r response
@@ -382,9 +382,9 @@ if [ "$response" = "y" ] || [ "$response" = "Y" ] || [ "$response" = "yes" ] || 
 dns_remove
 else
   echo ""
-  echo -e "${W}R)${N} ${B}Return to Main Menu${N}"
+  echo -e "${W}R)${N} ${B}返回主菜单${N}"
   echo ""
-  echo -e "${W}Q)${N} ${B}Quit${N}"
+  echo -e "${W}Q)${N} ${B}退出${N}"
   echo "$div"
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
@@ -392,17 +392,17 @@ else
   read -r choice
  
   case $choice in
-  r|R) echo "${B}Return to Main Menu Selected... ${N}"
+  r|R) echo "${B}返回主菜单中... ${N}"
   sleep 1
   clear
   menu
   ;;
-  q|Q) echo " ${R}Quiting... ${N}"
+  q|Q) echo " ${R}退出中... ${N}"
   sleep 1
   clear
   quit
   ;;
-  *) echo "${Y}item not available! Try Again${N}"
+  *) echo "${Y}项目不可用！再试一次${N}"
   sleep 1.5
   clear
   ;;
@@ -418,11 +418,11 @@ choice=""
 
   echo "$div"
   echo ""
-  echo "${G}***CUSTOM DNS MENU***${N}"
+  echo "${G}***自定义DNS菜单***${N}"
   echo ""
   echo "$div"
   echo ""
-  echo -n "${G}Please Enter Your Custom DNS${N}" 
+  echo -n "${G}请输入您的自定义DNS${N}" 
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
   echo ""
@@ -442,14 +442,14 @@ echo "iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $cust
 echo "iptables -t nat -I OUTPUT -p tcp --dport 53 -j DNAT --to-destination $custom:53" >> $DNSSERV 2>&1
  fi
   echo ""
-  echo -n "${G} Would You Like to Enter a Second DNS?${N}"
+  echo -n "${G} 你想输入第二个DNS吗？?${N}"
   echo ""
   echo -n "${R} [CHOOSE] :   ${N}"
   echo ""
   read -r choice
   echo ""
 if [ "$choice" = "y" ] || [ "$choice" = "Y" ] || [ "$choice" = "yes" ] || [ "$choice" = "Yes" ] || [ "$choice" = "YES" ]; then
-  echo -n "${G} Please Enter Your Custom DNS2${N}"
+  echo -n "${G} 请输入您的自定义DNS2${N}"
   echo ""
   echo -n "${R} [CHOOSE]  :  ${N}"
   echo ""
@@ -472,12 +472,12 @@ printf "nameserver $custom\nnameserver $custom2" >> $MODPATH/system/etc/resolv.c
 chmod 644 $MODPATH/system/etc/resolv.conf
    fi
 else
-echo -n "${R}Return to menu? < y | n > : ${N}"
+echo -n "${R}返回菜单? < y | n > : ${N}"
 read -r mchoice
  if [ "$mchoice" = "y" ]; then
 menu
  else
-echo "${R} Thanks For Using Custom DNS Module By @JohnFawkes - @Telegram/@XDA ${N}"
+echo "${R} 感谢您使用自定义DNS模块 By @JohnFawkes - @Telegram/@XDA ${N}"
 sleep 1.5
 clear && quit
  fi
@@ -494,26 +494,26 @@ while [ "$choice" != "q" ]
   do  	
   mod_head
   echo "$div"
-  echo "${G}***DNS MAIN MENU***${N}"
+  echo "${G}***DNS主菜单***${N}"
   echo "$div"
   echo ""
   echo "$div"
   if [ "$custom" ]; then
-  echo -e "${W}Your Custom DNS is :${N} ${R}$custom${N}"
+  echo -e "${W}您的自定义DNS是:${N} ${R}$custom${N}"
   fi
   if [ "$custom2" ]; then
-  echo -e "${W}Your Second Custom DNS is :${N} ${R}$custom2${N}"
+  echo -e "${W}您的第二个自定义DNS是 :${N} ${R}$custom2${N}"
   fi
   echo "$div"
-  echo "${G}Please make a Selection${N}"
+  echo "${G}请做出选择${N}"
   echo ""
-  echo -e "${W}D)${N} ${B}Enter Custom DNS${N}"
+  echo -e "${W}D)${N} ${B}输入自定义DNS${N}"
   echo ""
-  echo -e "${W}R)${N} ${B}Remove Custom DNS${N}"
+  echo -e "${W}R)${N} ${B}移除自定义DNS${N}"
   echo ""
-  echo -e "${W}Q)${N} ${B}Quit${N}"
+  echo -e "${W}Q)${N} ${B}退出${N}"
   echo ""
-  echo -e "${W}L)${N} ${B}Logs${N}"
+  echo -e "${W}L)${N} ${B}日志${N}"
   echo "$div"
   echo ""
   echo -n "${R}[CHOOSE] :  ${N}"
@@ -521,27 +521,27 @@ while [ "$choice" != "q" ]
   read -r choice
  
   case $choice in
-  d|D) echo "${G} Custom DNS Menu Selected... ${N}"
+  d|D) echo "${G} 自定义DNS菜单已选中... ${N}"
   sleep 1
   clear
   dns_menu
   ;;
-  r|R) echo "${B} Remove Custom DNS Selected... ${N}"
+  r|R) echo "${B} 移除选定的自定义DNS... ${N}"
   sleep 1
   clear
   re_dns_menu
   ;;
-  q|Q) echo " ${R}Quiting... ${N}"
+  q|Q) echo " ${R}退出中... ${N}"
   sleep 1
   clear
   quit
   ;;
-  l|L) echo "${R}Logs Selected...${N}"
+  l|L) echo "${R}已选择日志...${N}"
   sleep 1
   clear
   log_menu
   ;;
-  *) echo "${Y}item not available! Try Again${N}"
+  *) echo "${Y}项目不可用！再试一次${N}"
   sleep 1.5
   clear
   ;;
@@ -560,12 +560,12 @@ case $1 in
 custom=$(echo $(get_file_value $DNSLOG "custom=") | sed 's|-.*||')
 custom2=$(echo $(get_file_value $DNSLOG "custom2=") | sed 's|-.*||')
   if [ "$custom" ]; then
-  echo -e "${W}Your Custom DNS is :${N} ${R}$custom${N}"
+  echo -e "${W}您的自定义DNS是:${N} ${R}$custom${N}"
   elif [ "$custom2" ]; then
-  echo -e "${W}Your Second Custom DNS is :${N} ${R}$custom2${N}"
+  echo -e "${W}您的第二个自定义DNS是:${N} ${R}$custom2${N}"
   else
-  echo -e "${R}NO CUSTOM DNS IN USE${N}"
-  echo -e "${R}Please run 'su' then 'dns_switch' to use a custom DNS${N}"
+  echo -e "${R}没有使用自定义DNS${N}"
+  echo -e "${R}请以su权限运行dns_switch进行设置${N}"
   fi
   done
   exit;;
